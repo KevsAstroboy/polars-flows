@@ -1,0 +1,155 @@
+{
+  "info": {
+    "name": "Polars Flows - Energy API",
+    "description": "Collection minimale : ingestion d'un CSV de production puis lecture des KPIs valorisés d'un actif.\n\nPrérequis :\n1. uv run python manage.py migrate\n2. uv run python manage.py seed_assets\n3. uv run python manage.py ingest_prices source/market_price.csv\n4. uv run python manage.py runserver\n\nVérifier le chemin du fichier CSV dans le Body de la requête 1.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "asset_id",
+      "value": "1"
+    },
+    {
+      "key": "timezone",
+      "value": "Europe/Paris"
+    },
+    {
+      "key": "price_zone",
+      "value": "FR"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Ingest production CSV",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 ou 201', function () {",
+              "  pm.expect([200, 201]).to.include(pm.response.code);",
+              "});",
+              "pm.test('Ingestion terminée', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.status).to.be.oneOf(['SUCCESS', 'PARTIAL']);",
+              "  pm.expect(body.rows_ingested).to.be.a('number');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "source/eolien_productions.csv"
+            },
+            {
+              "key": "data_type",
+              "value": "ESTIMATED",
+              "type": "text"
+            },
+            {
+              "key": "year",
+              "value": "2026",
+              "type": "text"
+            },
+            {
+              "key": "source_timezone",
+              "value": "UTC",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/ingest/production/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "ingest",
+            "production",
+            ""
+          ]
+        },
+        "description": "Upload du CSV de production. Le fichier contient 5 années ; year=2026 ne garde que la série estimée."
+      }
+    },
+    {
+      "name": "2. Asset performance",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "pm.test('KPIs présents', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.kpis).to.be.an('array');",
+              "  pm.expect(body.totals.production_mwh).to.be.a('number');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/assets/{{asset_id}}/performance/?start_date=2026-01-01&end_date=2026-09-23&granularity=monthly&data_type=ESTIMATED&timezone={{timezone}}&price_zone={{price_zone}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "assets",
+            "{{asset_id}}",
+            "performance",
+            ""
+          ],
+          "query": [
+            {
+              "key": "start_date",
+              "value": "2026-01-01"
+            },
+            {
+              "key": "end_date",
+              "value": "2026-09-23"
+            },
+            {
+              "key": "granularity",
+              "value": "monthly"
+            },
+            {
+              "key": "data_type",
+              "value": "ESTIMATED"
+            },
+            {
+              "key": "timezone",
+              "value": "{{timezone}}"
+            },
+            {
+              "key": "price_zone",
+              "value": "{{price_zone}}"
+            }
+          ]
+        },
+        "description": "KPIs mensuels de l'actif 1. Changer timezone=UTC pour reproduire exactement les chiffres du Step 2."
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+[project]
+name = "polars-flows"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.2,<6.0",
+    "djangorestframework>=3.18.3",
+    "polars>=2.0.0",
+    "pyarrow>=26.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-django>=4.14.0",
+    "ruff>=0.17.1",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["energy/migrations"]
+
+[tool.ruff.lint]
+# RUF012 est un faux positif pour les Meta de modèles Django.
+ignore = ["RUF012"]
